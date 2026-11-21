@@ -1,6 +1,7 @@
 package com.example.creepercat.client;
 
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.model.ModelPart;
 import net.minecraft.client.network.AbstractClientPlayerEntity;
 import net.minecraft.client.render.OverlayTexture;
 import net.minecraft.client.render.RenderLayer;
@@ -19,9 +20,8 @@ public class PlayerCatRenderer {
 
     private static CatEntityModel<CatEntity> getModel() {
         if (model == null) {
-            var ctx = MinecraftClient.getInstance().getEntityRenderDispatcher().getTextRenderer();
             model = new CatEntityModel<>(MinecraftClient.getInstance()
-                    .getEntityRenderDispatcher().getEntityModels()
+                    .getEntityModelLoader()
                     .getModelPart(EntityModelLayers.CAT));
         }
         return model;
@@ -48,45 +48,56 @@ public class PlayerCatRenderer {
         matrices.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(-yaw));
         matrices.scale(scale, scale, scale);
 
-        // Animation: stand up on hind legs + front paws spread
+        // Анимация вставания на две задние лапы
         float stand = 0f;
         if (anim > 0) {
-            float k = 1f - (anim / 25f); // 0 -> 1 over animation
+            float k = 1f - (anim / 25f);
             stand = Math.min(1f, k * 1.4f);
             matrices.multiply(RotationAxis.POSITIVE_X.rotationDegrees(-85f * stand));
             matrices.translate(0, 0.4 * stand, 0);
         }
 
-        // Position model so its feet are at y=0
-        matrices.translate(0, 0.55, 0);
+        // Выравниваем модель кота по земле (модель в Minecraft перевернута по Y)
+        matrices.translate(0, 1.5, 0);
+        matrices.scale(1.0f, -1.0f, -1.0f);
 
         VertexConsumer vc = vcp.getBuffer(RenderLayer.getEntityCutoutNoCull(tex));
+        ModelPart root = m.getPart();
 
-        // Animate legs and tail procedurally on top of vanilla model
+        // Анимация лап при ходьбе
         float walkPhase = age * 0.5f;
-        m.rightHindLeg.pitch = MathHelper.cos(walkPhase) * 0.5f;
-        m.leftHindLeg.pitch = MathHelper.cos(walkPhase + (float) Math.PI) * 0.5f;
-        m.rightFrontLeg.pitch = MathHelper.cos(walkPhase + (float) Math.PI) * 0.5f;
-        m.leftFrontLeg.pitch = MathHelper.cos(walkPhase) * 0.5f;
+        ModelPart rightHind = root.getChild("right_hind_leg");
+        ModelPart leftHind = root.getChild("left_hind_leg");
+        ModelPart rightFront = root.getChild("right_front_leg");
+        ModelPart leftFront = root.getChild("left_front_leg");
+
+        rightHind.pitch = MathHelper.cos(walkPhase) * 0.5f;
+        leftHind.pitch = MathHelper.cos(walkPhase + (float) Math.PI) * 0.5f;
+        rightFront.pitch = MathHelper.cos(walkPhase + (float) Math.PI) * 0.5f;
+        leftFront.pitch = MathHelper.cos(walkPhase) * 0.5f;
 
         if (stand > 0.01f) {
-            // Front paws spread out
-            m.rightFrontLeg.pitch = -1.0f * stand;
-            m.leftFrontLeg.pitch = -1.0f * stand;
-            m.rightFrontLeg.yaw = 0.6f * stand;
-            m.leftFrontLeg.yaw = -0.6f * stand;
+            rightFront.pitch = -1.0f * stand;
+            leftFront.pitch = -1.0f * stand;
+            rightFront.yaw = 0.6f * stand;
+            leftFront.yaw = -0.6f * stand;
+        } else {
+            rightFront.yaw = 0f;
+            leftFront.yaw = 0f;
         }
 
-        m.tail[0].pitch = MathHelper.sin(age * 0.2f) * 0.3f;
-        m.tail[0].yaw = MathHelper.cos(age * 0.15f) * 0.4f;
+        ModelPart tail1 = root.getChild("tail1");
+        tail1.pitch = MathHelper.sin(age * 0.2f) * 0.3f + 0.8f;
+        tail1.yaw = MathHelper.cos(age * 0.15f) * 0.4f;
 
-        m.head.pitch = MathHelper.sin(age * 0.1f) * 0.1f;
+        ModelPart head = root.getChild("head");
+        head.pitch = MathHelper.sin(age * 0.1f) * 0.1f;
 
-        m.render(matrices, vc, light, OverlayTexture.DEFAULT_UV);
+        m.render(matrices, vc, light, OverlayTexture.DEFAULT_UV, 1.0f, 1.0f, 1.0f, 1.0f);
 
         matrices.pop();
 
-        // Stage aura on client
+        // Частицы стадий эволюции
         if (stage >= 2) {
             for (int i = 0; i < 3; i++) {
                 double a = (age * 0.2 + i * Math.PI * 2 / 3) % (Math.PI * 2);
