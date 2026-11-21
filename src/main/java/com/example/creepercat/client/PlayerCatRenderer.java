@@ -17,12 +17,14 @@ import net.minecraft.util.math.RotationAxis;
 
 public class PlayerCatRenderer {
     private static CatEntityModel<CatEntity> model;
+    private static ModelPart rootPart;
 
     private static CatEntityModel<CatEntity> getModel() {
         if (model == null) {
-            model = new CatEntityModel<>(MinecraftClient.getInstance()
+            rootPart = MinecraftClient.getInstance()
                     .getEntityModelLoader()
-                    .getModelPart(EntityModelLayers.CAT));
+                    .getModelPart(EntityModelLayers.CAT);
+            model = new CatEntityModel<>(rootPart);
         }
         return model;
     }
@@ -57,19 +59,18 @@ public class PlayerCatRenderer {
             matrices.translate(0, 0.4 * stand, 0);
         }
 
-        // Выравниваем модель кота по земле (модель в Minecraft перевернута по Y)
+        // Выравниваем модель кота по земле
         matrices.translate(0, 1.5, 0);
         matrices.scale(1.0f, -1.0f, -1.0f);
 
         VertexConsumer vc = vcp.getBuffer(RenderLayer.getEntityCutoutNoCull(tex));
-        ModelPart root = m.getPart();
 
         // Анимация лап при ходьбе
         float walkPhase = age * 0.5f;
-        ModelPart rightHind = root.getChild("right_hind_leg");
-        ModelPart leftHind = root.getChild("left_hind_leg");
-        ModelPart rightFront = root.getChild("right_front_leg");
-        ModelPart leftFront = root.getChild("left_front_leg");
+        ModelPart rightHind = rootPart.getChild("right_hind_leg");
+        ModelPart leftHind = rootPart.getChild("left_hind_leg");
+        ModelPart rightFront = rootPart.getChild("right_front_leg");
+        ModelPart leftFront = rootPart.getChild("left_front_leg");
 
         rightHind.pitch = MathHelper.cos(walkPhase) * 0.5f;
         leftHind.pitch = MathHelper.cos(walkPhase + (float) Math.PI) * 0.5f;
@@ -86,11 +87,11 @@ public class PlayerCatRenderer {
             leftFront.yaw = 0f;
         }
 
-        ModelPart tail1 = root.getChild("tail1");
+        ModelPart tail1 = rootPart.getChild("tail1");
         tail1.pitch = MathHelper.sin(age * 0.2f) * 0.3f + 0.8f;
         tail1.yaw = MathHelper.cos(age * 0.15f) * 0.4f;
 
-        ModelPart head = root.getChild("head");
+        ModelPart head = rootPart.getChild("head");
         head.pitch = MathHelper.sin(age * 0.1f) * 0.1f;
 
         m.render(matrices, vc, light, OverlayTexture.DEFAULT_UV, 1.0f, 1.0f, 1.0f, 1.0f);
