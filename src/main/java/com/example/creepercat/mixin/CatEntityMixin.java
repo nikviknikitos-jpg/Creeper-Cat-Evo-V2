@@ -1,5 +1,6 @@
 package com.example.creepercat.mixin;
 
+import net.minecraft.entity.mob.CreeperEntity;
 import net.minecraft.entity.passive.CatEntity;
 import net.minecraft.nbt.NbtCompound;
 import org.spongepowered.asm.mixin.Mixin;
@@ -7,6 +8,9 @@ import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+
+import java.util.Comparator;
+import java.util.List;
 
 @Mixin(CatEntity.class)
 public class CatEntityMixin {
@@ -17,11 +21,15 @@ public class CatEntityMixin {
     private void creepercat$battleTicks(CallbackInfo ci) {
         CatEntity self = (CatEntity) (Object) this;
         if (self.getWorld().isClient) return;
-        net.minecraft.entity.mob.CreeperEntity target = self.getWorld()
-                .getClosestEntity(net.minecraft.entity.mob.CreeperEntity.class,
-                        net.minecraft.predicate.entity.EntityPredicates.VALID_ENTITY,
-                        self, self.getX(), self.getY(), self.getZ(),
-                        self.getBoundingBox().expand(10, 6, 10));
+        List<CreeperEntity> creepers = self.getWorld().getEntitiesByClass(
+                CreeperEntity.class,
+                self.getBoundingBox().expand(10, 6, 10),
+                e -> e.isAlive()
+        );
+        CreeperEntity target = creepers.stream()
+                .min(Comparator.comparingDouble(self::squaredDistanceTo))
+                .orElse(null);
+
         if (self.isTamed() && !self.isSitting() && target != null) {
             creepercat$battleTicks = Math.min(creepercat$battleTicks + 1, 40);
         } else {
@@ -39,6 +47,7 @@ public class CatEntityMixin {
         creepercat$battleTicks = nbt.getInt("creepercat_battle");
     }
 
-    @org.spongepowered.asm.mixin.gen.Accessor("creepercat$battleTicks")
-    public int creepercat$getBattleTicks() { return creepercat$battleTicks; }
+    public int creepercat$getBattleTicks() {
+        return creepercat$battleTicks;
+    }
 }
