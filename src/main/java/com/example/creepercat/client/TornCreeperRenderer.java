@@ -1,7 +1,7 @@
 package com.example.creepercat.client;
 
 import com.example.creepercat.entity.TornCreeperEntity;
-import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.model.ModelPart;
 import net.minecraft.client.render.OverlayTexture;
 import net.minecraft.client.render.RenderLayer;
 import net.minecraft.client.render.VertexConsumer;
@@ -13,7 +13,6 @@ import net.minecraft.client.render.entity.model.EntityModelLayers;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.RotationAxis;
-import org.joml.Matrix4f;
 
 public class TornCreeperRenderer extends EntityRenderer<TornCreeperEntity> {
     private static final Identifier TEX = new Identifier("minecraft", "textures/entity/creeper/creeper.png");
@@ -25,28 +24,36 @@ public class TornCreeperRenderer extends EntityRenderer<TornCreeperEntity> {
     }
 
     @Override
-    public Identifier getTexture(TornCreeperEntity entity) { return TEX; }
+    public Identifier getTexture(TornCreeperEntity entity) {
+        return TEX;
+    }
 
     @Override
     public void render(TornCreeperEntity entity, float yaw, float tickDelta, MatrixStack matrices,
                        VertexConsumerProvider vcp, int light) {
         matrices.push();
         VertexConsumer vc = vcp.getBuffer(RenderLayer.getEntityCutoutNoCull(TEX));
-        // Top half with rotation
+        ModelPart root = this.model.getPart();
+
+        // Верхняя половина крипера (голова и верх тела) с вращением и подлетом
         matrices.push();
         matrices.translate(entity.dx * (entity.age + tickDelta) * 0.1, 0.8 + Math.sin((entity.age + tickDelta) * 0.2) * 0.2, entity.dz * (entity.age + tickDelta) * 0.1);
         matrices.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(entity.rotation));
-        this.model.head.render(matrices, vc, light, OverlayTexture.DEFAULT_UV);
+        matrices.multiply(RotationAxis.POSITIVE_Z.rotationDegrees(entity.rotation * 0.5f));
+        root.getChild("head").render(matrices, vc, light, OverlayTexture.DEFAULT_UV);
+        root.getChild("body").render(matrices, vc, light, OverlayTexture.DEFAULT_UV);
         matrices.pop();
-        // Bottom half with rotation opposite
+
+        // Нижняя половина крипера (4 ноги) разлетается в противоположную сторону
         matrices.push();
         matrices.translate(-entity.dx * (entity.age + tickDelta) * 0.1, 0.0, -entity.dz * (entity.age + tickDelta) * 0.1);
         matrices.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(-entity.rotation));
-        this.model.rightHindLeg.render(matrices, vc, light, OverlayTexture.DEFAULT_UV);
-        this.model.leftHindLeg.render(matrices, vc, light, OverlayTexture.DEFAULT_UV);
-        this.model.rightFrontLeg.render(matrices, vc, light, OverlayTexture.DEFAULT_UV);
-        this.model.leftFrontLeg.render(matrices, vc, light, OverlayTexture.DEFAULT_UV);
+        root.getChild("right_hind_leg").render(matrices, vc, light, OverlayTexture.DEFAULT_UV);
+        root.getChild("left_hind_leg").render(matrices, vc, light, OverlayTexture.DEFAULT_UV);
+        root.getChild("right_front_leg").render(matrices, vc, light, OverlayTexture.DEFAULT_UV);
+        root.getChild("left_front_leg").render(matrices, vc, light, OverlayTexture.DEFAULT_UV);
         matrices.pop();
+
         matrices.pop();
     }
 }
